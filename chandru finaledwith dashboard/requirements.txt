@@ -1,0 +1,7 @@
+opencv-python>=4.8.0
+torch>=2.0.0
+transformers>=4.35.0
+Pillow>=10.0.0
+pywin32>=305
+flask>=3.0.0
+easyocr>=1.7.0
