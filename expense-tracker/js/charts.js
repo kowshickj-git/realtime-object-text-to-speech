@@ -27,10 +27,14 @@ const Charts = (() => {
     };
   }
 
+  function isChartAvailable() {
+    return typeof Chart !== 'undefined';
+  }
+
   // ─── Pie Chart: Category Distribution ──────────────────
   function renderPieChart(canvasId) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+    if (!canvas || !isChartAvailable()) return;
 
     const now = new Date();
     const catTotals = App.Expenses.getCategoryTotals(now.getFullYear(), now.getMonth());
@@ -89,7 +93,7 @@ const Charts = (() => {
   // ─── Bar Chart: Monthly Comparison ─────────────────────
   function renderBarChart(canvasId, months) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+    if (!canvas || !isChartAvailable()) return;
 
     months = months || 6;
     const trend = App.Expenses.getMonthlyTrend(months);
@@ -141,7 +145,7 @@ const Charts = (() => {
   // ─── Line Chart: Spending Trend ────────────────────────
   function renderLineChart(canvasId, months) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+    if (!canvas || !isChartAvailable()) return;
 
     months = months || 12;
     const trend = App.Expenses.getMonthlyTrend(months);
