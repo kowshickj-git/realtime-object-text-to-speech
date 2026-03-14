@@ -44,6 +44,23 @@ const App = (() => {
     return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
+  // ─── Utility: Hash Password (SHA-256 sync fallback) ───
+  function hashPassword(password) {
+    // Simple hash for localStorage-only app (no server)
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+      const ch = password.charCodeAt(i);
+      hash = ((hash << 5) - hash) + ch;
+      hash |= 0; // Convert to 32bit integer
+    }
+    // Mix with additional rounds for better distribution
+    for (let i = 0; i < 100; i++) {
+      hash = ((hash << 5) - hash) + (hash >>> 3);
+      hash |= 0;
+    }
+    return 'h$' + Math.abs(hash).toString(36);
+  }
+
   // ─── Storage Helpers ────────────────────────────────────
   function store(key, data) {
     try {
@@ -91,7 +108,7 @@ const App = (() => {
       if (!password || password.length < 8) return { ok: false, msg: 'Password must be at least 8 characters.' };
       if (this.findUser(email)) return { ok: false, msg: 'An account with this email already exists.' };
 
-      const user = { id: genId('usr'), name: name.trim(), email: email.trim().toLowerCase(), password, avatar: '', createdAt: new Date().toISOString() };
+      const user = { id: genId('usr'), name: name.trim(), email: email.trim().toLowerCase(), password: hashPassword(password), avatar: '', createdAt: new Date().toISOString() };
       const users = this.getUsers();
       users.push(user);
       store(KEYS.USERS, users);
@@ -103,7 +120,7 @@ const App = (() => {
       if (!this.validEmail(email)) return { ok: false, msg: 'Invalid email address.' };
       const user = this.findUser(email.trim().toLowerCase());
       if (!user) return { ok: false, msg: 'No account found with this email.' };
-      if (user.password !== password) return { ok: false, msg: 'Incorrect password.' };
+      if (user.password !== hashPassword(password)) return { ok: false, msg: 'Incorrect password.' };
       store(KEYS.CURRENT_USER, user);
       return { ok: true, user };
     },
@@ -526,13 +543,22 @@ const App = (() => {
 
       const headers = ['Date', 'Amount', 'Category', 'Description', 'Payment Method', 'Recurring'];
       const sym = Settings.getCurrencySymbol();
+
+      function csvEscape(val) {
+        const str = String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+          return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+      }
+
       const rows = expenses.map(e => [
-        e.date,
-        sym + e.amount.toFixed(2),
-        e.category,
-        '"' + (e.description || '').replace(/"/g, '""') + '"',
-        e.paymentMethod,
-        e.recurring || 'none'
+        csvEscape(e.date),
+        csvEscape(sym + e.amount.toFixed(2)),
+        csvEscape(e.category),
+        csvEscape(e.description || ''),
+        csvEscape(e.paymentMethod),
+        csvEscape(e.recurring || 'none')
       ]);
 
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

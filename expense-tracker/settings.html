@@ -213,9 +213,13 @@
             <span style="width:16px;height:16px;border-radius:50%;background:${c.color};display:inline-block;"></span>
             <span>${c.icon} ${c.name}</span>
           </div>
-          <button class="btn-icon" onclick="deleteCategory('${c.id}')" title="Delete">🗑️</button>
+          <button class="btn-icon delete-cat-btn" data-id="${c.id}" title="Delete">🗑️</button>
         </div>
       `).join('');
+
+      container.querySelectorAll('.delete-cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteCategory(btn.dataset.id));
+      });
     }
 
     function deleteCategory(id) {

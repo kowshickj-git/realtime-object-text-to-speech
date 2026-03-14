@@ -257,11 +257,18 @@
           <td>${e.paymentMethod}</td>
           <td>${e.recurring === 'none' ? '-' : e.recurring}</td>
           <td>
-            <button class="btn-icon" onclick="openEditModal('${e.id}')" title="Edit">✏️</button>
-            <button class="btn-icon" onclick="deleteExpense('${e.id}')" title="Delete">🗑️</button>
+            <button class="btn-icon edit-btn" data-id="${e.id}" title="Edit">✏️</button>
+            <button class="btn-icon delete-btn" data-id="${e.id}" title="Delete">🗑️</button>
           </td>
         </tr>`;
       }).join('');
+
+      tbody.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+      });
+      tbody.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteExpense(btn.dataset.id));
+      });
     }
 
     function sortTable(field) {

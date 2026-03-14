@@ -265,10 +265,14 @@
           <td><span class="category-badge">${getCatIcon(e.category)} ${e.category}</span></td>
           <td class="amount-cell">${sym}${e.amount.toFixed(2)}</td>
           <td>
-            <button class="btn-icon" onclick="deleteExpense('${e.id}')" title="Delete">🗑️</button>
+            <button class="btn-icon delete-expense-btn" data-id="${e.id}" title="Delete">🗑️</button>
           </td>
         </tr>
       `).join('');
+
+      tbody.querySelectorAll('.delete-expense-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteExpense(btn.dataset.id));
+      });
     }
 
     function deleteExpense(id) {

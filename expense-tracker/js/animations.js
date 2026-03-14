@@ -194,6 +194,11 @@ const Animations = (() => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     });
+
+    // Cleanup on page unload to prevent memory leaks
+    window.addEventListener('beforeunload', () => {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+    });
   }
 
   // ─── Page Transition ──────────────────────────────────

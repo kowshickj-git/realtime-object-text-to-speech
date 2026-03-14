@@ -169,11 +169,15 @@
             </div>
             ${alertHtml}
             <div style="margin-top:10px;text-align:right;">
-              <button class="btn btn-danger btn-sm" onclick="deleteBudget('${b.id}')">Remove</button>
+              <button class="btn btn-danger btn-sm delete-budget-btn" data-id="${b.id}">Remove</button>
             </div>
           </div>
         `;
       }).join('');
+
+      container.querySelectorAll('.delete-budget-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteBudget(btn.dataset.id));
+      });
     }
 
     function deleteBudget(id) {
