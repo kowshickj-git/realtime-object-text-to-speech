@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — ExpenseTracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <canvas id="ambient-bg"></canvas>
+  <div id="page-transition"></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><span class="logo-icon">💰</span><span>ExpenseTracker</span></div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+        <a href="add-expense.html"><span class="nav-icon">➕</span><span>Add Expense</span></a>
+        <a href="transactions.html"><span class="nav-icon">📋</span><span>Transactions</span></a>
+        <a href="analytics.html"><span class="nav-icon">📈</span><span>Analytics</span></a>
+        <a href="budgets.html"><span class="nav-icon">🎯</span><span>Budgets</span></a>
+        <a href="reports.html"><span class="nav-icon">📄</span><span>Reports</span></a>
+        <a href="settings.html"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-bottom"><a href="#" id="logout-btn"><span class="nav-icon">🚪</span><span>Log Out</span></a></div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebar-toggle">☰</button>
+          <h2>Settings</h2>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-icon" id="theme-toggle" title="Toggle theme">🌓</button>
+          <div class="user-info">
+            <span class="user-name" id="user-name"></span>
+            <div class="user-avatar" id="user-avatar"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div class="settings-grid">
+          <!-- Profile Settings -->
+          <div class="card">
+            <h3>👤 Profile</h3>
+            <form id="profile-form" novalidate>
+              <div class="form-group">
+                <label for="profile-name">Name</label>
+                <input type="text" id="profile-name" class="form-control" required>
+                <div class="form-error" id="profile-name-error"></div>
+              </div>
+              <div class="form-group">
+                <label for="profile-email">Email</label>
+                <input type="email" id="profile-email" class="form-control" disabled style="opacity:0.6;">
+                <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">Email cannot be changed.</p>
+              </div>
+              <button type="submit" class="btn btn-primary">Save Profile</button>
+            </form>
+          </div>
+
+          <!-- Currency Settings -->
+          <div class="card">
+            <h3>💱 Currency</h3>
+            <form id="currency-form">
+              <div class="form-group">
+                <label for="currency-select">Default Currency</label>
+                <select id="currency-select" class="form-control">
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="INR">INR (₹)</option>
+                  <option value="JPY">JPY (¥)</option>
+                  <option value="AUD">AUD (A$)</option>
+                  <option value="CAD">CAD (C$)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="monthly-income">Default Monthly Income</label>
+                <input type="number" id="monthly-income" class="form-control" min="0" step="0.01">
+              </div>
+              <button type="submit" class="btn btn-primary">Save Settings</button>
+            </form>
+          </div>
+
+          <!-- Category Management -->
+          <div class="card">
+            <h3>📂 Categories</h3>
+            <div id="category-list" style="margin-bottom:16px;"></div>
+            <form id="add-category-form" novalidate>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="new-cat-name">New Category Name</label>
+                  <input type="text" id="new-cat-name" class="form-control" placeholder="e.g., Pets" required>
+                  <div class="form-error" id="cat-error"></div>
+                </div>
+                <div class="form-group">
+                  <label for="new-cat-color">Color</label>
+                  <input type="color" id="new-cat-color" class="form-control" value="#FF5A09" style="height:44px;padding:4px;">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">➕ Add Category</button>
+            </form>
+          </div>
+
+          <!-- Theme Settings -->
+          <div class="card">
+            <h3>🎨 Appearance</h3>
+            <div class="form-group">
+              <label>Theme</label>
+              <div style="display:flex;gap:12px;margin-top:8px;">
+                <button class="btn btn-secondary" id="theme-dark" onclick="setTheme('dark')">🌙 Dark</button>
+                <button class="btn btn-secondary" id="theme-light" onclick="setTheme('light')">☀️ Light</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="card" style="border-color:var(--danger);">
+            <h3 style="color:var(--danger);">⚠️ Danger Zone</h3>
+            <p style="color:var(--text-muted);font-size:14px;margin-bottom:16px;">These actions cannot be undone. Please be careful.</p>
+            <div class="flex gap-10" style="flex-wrap:wrap;">
+              <button class="btn btn-danger" onclick="resetData()">🗑️ Reset All Data</button>
+              <button class="btn btn-danger" onclick="deleteAccount()">❌ Delete Account</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/animations.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.Auth.requireAuth()) return;
+
+      App.UI.initSidebar();
+      App.UI.initThemeToggle();
+      App.UI.initUserInfo();
+      App.UI.initLogout();
+
+      const user = App.Auth.currentUser();
+      const settings = App.Settings.get();
+
+      // Load profile
+      document.getElementById('profile-name').value = user.name;
+      document.getElementById('profile-email').value = user.email;
+
+      // Load settings
+      document.getElementById('currency-select').value = settings.currency;
+      document.getElementById('monthly-income').value = settings.monthlyIncome;
+
+      renderCategories();
+
+      // Profile form
+      document.getElementById('profile-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('profile-name').value.trim();
+        document.getElementById('profile-name-error').textContent = '';
+        if (!name) {
+          document.getElementById('profile-name-error').textContent = 'Name is required.';
+          return;
+        }
+        App.Auth.updateProfile({ name });
+        App.UI.initUserInfo();
+        App.UI.showToast('Profile updated!', 'success');
+      });
+
+      // Currency form
+      document.getElementById('currency-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        App.Settings.update({
+          currency: document.getElementById('currency-select').value,
+          monthlyIncome: Number(document.getElementById('monthly-income').value) || 5000,
+        });
+        App.UI.showToast('Settings saved!', 'success');
+      });
+
+      // Add category form
+      document.getElementById('add-category-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('new-cat-name').value;
+        const color = document.getElementById('new-cat-color').value;
+        document.getElementById('cat-error').textContent = '';
+
+        const result = App.Categories.add(name, color, '📁');
+        if (result.ok) {
+          App.UI.showToast('Category added!', 'success');
+          document.getElementById('new-cat-name').value = '';
+          renderCategories();
+        } else {
+          document.getElementById('cat-error').textContent = result.msg;
+        }
+      });
+
+      document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+      });
+
+      Animations.initAll();
+    });
+
+    function renderCategories() {
+      const cats = App.Categories.getAll();
+      const container = document.getElementById('category-list');
+
+      container.innerHTML = cats.map(c => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border-color);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="width:16px;height:16px;border-radius:50%;background:${c.color};display:inline-block;"></span>
+            <span>${c.icon} ${c.name}</span>
+          </div>
+          <button class="btn-icon delete-cat-btn" data-id="${c.id}" title="Delete">🗑️</button>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.delete-cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteCategory(btn.dataset.id));
+      });
+    }
+
+    function deleteCategory(id) {
+      if (confirm('Delete this category?')) {
+        App.Categories.remove(id);
+        App.UI.showToast('Category removed.', 'info');
+        renderCategories();
+      }
+    }
+
+    function setTheme(theme) {
+      if (theme === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+      App.Settings.update({ theme });
+      App.UI.showToast('Theme updated!', 'success');
+    }
+
+    function resetData() {
+      if (confirm('This will delete ALL your data including expenses, budgets, and settings. Are you sure?')) {
+        App.Settings.resetAllData();
+        App.UI.showToast('All data has been reset.', 'info');
+        setTimeout(() => window.location.reload(), 1000);
+      }
+    }
+
+    function deleteAccount() {
+      if (confirm('This will permanently delete your account and all data. This cannot be undone. Continue?')) {
+        App.Settings.resetAllData();
+        App.Auth.logout();
+        window.location.href = 'login.html';
+      }
+    }
+  </script>
+</body>
+</html>

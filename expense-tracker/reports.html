@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports — ExpenseTracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <canvas id="ambient-bg"></canvas>
+  <div id="page-transition"></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><span class="logo-icon">💰</span><span>ExpenseTracker</span></div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+        <a href="add-expense.html"><span class="nav-icon">➕</span><span>Add Expense</span></a>
+        <a href="transactions.html"><span class="nav-icon">📋</span><span>Transactions</span></a>
+        <a href="analytics.html"><span class="nav-icon">📈</span><span>Analytics</span></a>
+        <a href="budgets.html"><span class="nav-icon">🎯</span><span>Budgets</span></a>
+        <a href="reports.html"><span class="nav-icon">📄</span><span>Reports</span></a>
+        <a href="settings.html"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-bottom"><a href="#" id="logout-btn"><span class="nav-icon">🚪</span><span>Log Out</span></a></div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebar-toggle">☰</button>
+          <h2>Reports &amp; Export</h2>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-icon" id="theme-toggle" title="Toggle theme">🌓</button>
+          <div class="user-info">
+            <span class="user-name" id="user-name"></span>
+            <div class="user-avatar" id="user-avatar"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- Summary -->
+        <div class="stats-grid">
+          <div class="stat-card income">
+            <div class="card-label">Total Income</div>
+            <div class="card-value" id="total-income">$0.00</div>
+            <div class="card-icon">💰</div>
+          </div>
+          <div class="stat-card expense">
+            <div class="card-label">Total Expenses</div>
+            <div class="card-value" id="total-expense">$0.00</div>
+            <div class="card-icon">💸</div>
+          </div>
+          <div class="stat-card total">
+            <div class="card-label">Transactions</div>
+            <div class="card-value" id="tx-count">0</div>
+            <div class="card-icon">📋</div>
+          </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="card">
+          <h3>Export Your Data</h3>
+          <p style="color:var(--text-muted);margin-bottom:20px;">Download your expense data in your preferred format.</p>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;">
+            <div style="background:var(--bg-input);border-radius:var(--radius);padding:24px;text-align:center;border:1px solid var(--border-color);">
+              <div style="font-size:48px;margin-bottom:12px;">📄</div>
+              <h4 style="margin-bottom:8px;">PDF Report</h4>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Generate a printable report with charts and summaries.</p>
+              <button class="btn btn-primary" onclick="exportPDF()">Download PDF</button>
+            </div>
+            <div style="background:var(--bg-input);border-radius:var(--radius);padding:24px;text-align:center;border:1px solid var(--border-color);">
+              <div style="font-size:48px;margin-bottom:12px;">📊</div>
+              <h4 style="margin-bottom:8px;">CSV Export</h4>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Comma-separated file compatible with Excel and spreadsheets.</p>
+              <button class="btn btn-primary" onclick="exportCSV()">Download CSV</button>
+            </div>
+            <div style="background:var(--bg-input);border-radius:var(--radius);padding:24px;text-align:center;border:1px solid var(--border-color);">
+              <div style="font-size:48px;margin-bottom:12px;">🔧</div>
+              <h4 style="margin-bottom:8px;">JSON Data</h4>
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Raw JSON data export for developers and backup.</p>
+              <button class="btn btn-primary" onclick="exportJSON()">Download JSON</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Breakdown -->
+        <div class="card">
+          <h3>Monthly Breakdown</h3>
+          <div class="table-wrapper" style="margin-top:16px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Total Spent</th>
+                  <th>Transactions</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-breakdown"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/animations.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.Auth.requireAuth()) return;
+
+      App.UI.initSidebar();
+      App.UI.initThemeToggle();
+      App.UI.initUserInfo();
+      App.UI.initLogout();
+
+      const sym = App.Settings.getCurrencySymbol();
+      const expenses = App.Expenses.getUserExpenses();
+      const totalExpense = expenses.reduce((s, e) => s + e.amount, 0);
+      const totalIncome = App.Income.getTotalIncome() || App.Settings.get().monthlyIncome;
+
+      App.UI.setCardValue('total-income', sym + totalIncome.toFixed(2));
+      App.UI.setCardValue('total-expense', sym + totalExpense.toFixed(2));
+      App.UI.setCardValue('tx-count', expenses.length.toString());
+
+      renderMonthlyBreakdown();
+
+      document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+      });
+
+      Animations.initAll();
+    });
+
+    function renderMonthlyBreakdown() {
+      const trend = App.Expenses.getMonthlyTrend(12);
+      const tbody = document.getElementById('monthly-breakdown');
+      const sym = App.Settings.getCurrencySymbol();
+      const expenses = App.Expenses.getUserExpenses();
+
+      tbody.innerHTML = trend.map(t => {
+        const count = expenses.filter(e => {
+          const d = new Date(e.date);
+          return d.getFullYear() === t.year && d.getMonth() === t.month;
+        }).length;
+        return `<tr>
+          <td>${t.label}</td>
+          <td class="amount-cell">${sym}${t.total.toFixed(2)}</td>
+          <td>${count}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function exportPDF() {
+      const result = App.Export.toPDF();
+      if (!result) App.UI.showToast('No expenses to export.', 'warning');
+      else App.UI.showToast('PDF report generated!', 'success');
+    }
+
+    function exportCSV() {
+      const result = App.Export.toCSV();
+      if (!result) App.UI.showToast('No expenses to export.', 'warning');
+      else App.UI.showToast('CSV downloaded!', 'success');
+    }
+
+    function exportJSON() {
+      const result = App.Export.toJSON();
+      if (!result) App.UI.showToast('No expenses to export.', 'warning');
+      else App.UI.showToast('JSON downloaded!', 'success');
+    }
+  </script>
+</body>
+</html>

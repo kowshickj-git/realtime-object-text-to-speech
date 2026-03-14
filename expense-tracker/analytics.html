@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — ExpenseTracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <canvas id="ambient-bg"></canvas>
+  <div id="page-transition"></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><span class="logo-icon">💰</span><span>ExpenseTracker</span></div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+        <a href="add-expense.html"><span class="nav-icon">➕</span><span>Add Expense</span></a>
+        <a href="transactions.html"><span class="nav-icon">📋</span><span>Transactions</span></a>
+        <a href="analytics.html"><span class="nav-icon">📈</span><span>Analytics</span></a>
+        <a href="budgets.html"><span class="nav-icon">🎯</span><span>Budgets</span></a>
+        <a href="reports.html"><span class="nav-icon">📄</span><span>Reports</span></a>
+        <a href="settings.html"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-bottom"><a href="#" id="logout-btn"><span class="nav-icon">🚪</span><span>Log Out</span></a></div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebar-toggle">☰</button>
+          <h2>Analytics</h2>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-icon" id="theme-toggle" title="Toggle theme">🌓</button>
+          <div class="user-info">
+            <span class="user-name" id="user-name"></span>
+            <div class="user-avatar" id="user-avatar"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- Summary Cards -->
+        <div class="stats-grid">
+          <div class="stat-card income">
+            <div class="card-label">Monthly Income</div>
+            <div class="card-value" id="total-income">$0.00</div>
+            <div class="card-icon">💰</div>
+          </div>
+          <div class="stat-card expense">
+            <div class="card-label">Monthly Expenses</div>
+            <div class="card-value" id="total-expense">$0.00</div>
+            <div class="card-icon">💸</div>
+          </div>
+          <div class="stat-card balance">
+            <div class="card-label">Remaining Balance</div>
+            <div class="card-value" id="balance">$0.00</div>
+            <div class="card-icon">🏦</div>
+          </div>
+          <div class="stat-card total">
+            <div class="card-label">Total Transactions</div>
+            <div class="card-value" id="monthly-spending">0</div>
+            <div class="card-icon">📊</div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>📊 Category Distribution</h3>
+            <div class="chart-container">
+              <canvas id="pie-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>📈 Monthly Spending Comparison</h3>
+            <div class="chart-container">
+              <canvas id="bar-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card" style="grid-column: 1 / -1;">
+            <h3>📉 Spending Trend (12 Months)</h3>
+            <div class="chart-container" style="height:350px;">
+              <canvas id="line-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="card">
+          <h3>Category Breakdown — This Month</h3>
+          <div id="category-breakdown" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px;"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/animations.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.Auth.requireAuth()) return;
+
+      App.UI.initSidebar();
+      App.UI.initThemeToggle();
+      App.UI.initUserInfo();
+      App.UI.initLogout();
+
+      App.UI.renderDashboardCards();
+
+      // Override the transaction count card
+      const txCount = App.Expenses.getUserExpenses().length;
+      App.UI.setCardValue('monthly-spending', txCount.toString());
+
+      Charts.refreshAll();
+      renderCategoryBreakdown();
+
+      document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+      });
+
+      Animations.initAll();
+    });
+
+    function renderCategoryBreakdown() {
+      const now = new Date();
+      const catTotals = App.Expenses.getCategoryTotals(now.getFullYear(), now.getMonth());
+      const cats = App.Categories.getAll();
+      const container = document.getElementById('category-breakdown');
+      const sym = App.Settings.getCurrencySymbol();
+
+      const totalSpent = Object.values(catTotals).reduce((s, v) => s + v, 0);
+
+      if (totalSpent === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;">No spending data this month.</p>';
+        return;
+      }
+
+      container.innerHTML = cats.map(cat => {
+        const spent = catTotals[cat.name] || 0;
+        if (spent === 0) return '';
+        const pct = ((spent / totalSpent) * 100).toFixed(1);
+        return `
+          <div style="background:var(--bg-input);border-radius:var(--radius-sm);padding:16px;border-left:4px solid ${cat.color};">
+            <div style="font-size:24px;margin-bottom:4px;">${cat.icon}</div>
+            <div style="font-weight:600;font-size:14px;">${cat.name}</div>
+            <div style="font-size:20px;font-weight:700;color:var(--accent);margin-top:4px;">${sym}${spent.toFixed(2)}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${pct}% of total</div>
+          </div>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>

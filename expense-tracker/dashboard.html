@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — ExpenseTracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <canvas id="ambient-bg"></canvas>
+  <div id="page-transition"></div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">💰</span>
+        <span>ExpenseTracker</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+        <a href="add-expense.html"><span class="nav-icon">➕</span><span>Add Expense</span></a>
+        <a href="transactions.html"><span class="nav-icon">📋</span><span>Transactions</span></a>
+        <a href="analytics.html"><span class="nav-icon">📈</span><span>Analytics</span></a>
+        <a href="budgets.html"><span class="nav-icon">🎯</span><span>Budgets</span></a>
+        <a href="reports.html"><span class="nav-icon">📄</span><span>Reports</span></a>
+        <a href="settings.html"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-bottom">
+        <a href="#" id="logout-btn"><span class="nav-icon">🚪</span><span>Log Out</span></a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebar-toggle">☰</button>
+          <h2>Dashboard</h2>
+        </div>
+        <div class="topbar-right">
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="global-search" placeholder="Search expenses...">
+          </div>
+          <button class="topbar-icon notification-badge" id="notification-btn" title="Notifications">
+            🔔
+            <span class="badge-dot" id="notif-dot" style="display:none;"></span>
+          </button>
+          <button class="topbar-icon" id="theme-toggle" title="Toggle theme">🌓</button>
+          <div class="user-info">
+            <span class="user-name" id="user-name"></span>
+            <div class="user-avatar" id="user-avatar"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card income">
+            <div class="card-label">Monthly Income</div>
+            <div class="card-value" id="total-income">$0.00</div>
+            <div class="card-icon">💰</div>
+          </div>
+          <div class="stat-card expense">
+            <div class="card-label">Monthly Expenses</div>
+            <div class="card-value" id="total-expense">$0.00</div>
+            <div class="card-icon">💸</div>
+          </div>
+          <div class="stat-card balance">
+            <div class="card-label">Remaining Balance</div>
+            <div class="card-value" id="balance">$0.00</div>
+            <div class="card-icon">🏦</div>
+          </div>
+          <div class="stat-card total">
+            <div class="card-label">All-Time Spending</div>
+            <div class="card-value" id="monthly-spending">$0.00</div>
+            <div class="card-icon">📊</div>
+          </div>
+        </div>
+
+        <!-- Quick Add Expense -->
+        <div class="card mb-20">
+          <h3>Quick Add Expense</h3>
+          <form id="quick-add-form" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+            <div class="form-group mb-0" style="flex:1;min-width:120px;">
+              <label for="qa-amount">Amount</label>
+              <input type="number" id="qa-amount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
+            </div>
+            <div class="form-group mb-0" style="flex:1;min-width:150px;">
+              <label for="qa-category">Category</label>
+              <select id="qa-category" class="form-control" required></select>
+            </div>
+            <div class="form-group mb-0" style="flex:1;min-width:140px;">
+              <label for="qa-date">Date</label>
+              <input type="date" id="qa-date" class="form-control" required>
+            </div>
+            <div class="form-group mb-0" style="flex:2;min-width:200px;">
+              <label for="qa-desc">Description</label>
+              <input type="text" id="qa-desc" class="form-control" placeholder="What was this for?">
+            </div>
+            <button type="submit" class="btn btn-primary">Add</button>
+          </form>
+          <div class="form-error mt-10" id="qa-error"></div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Spending by Category</h3>
+            <div class="chart-container">
+              <canvas id="pie-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Monthly Comparison</h3>
+            <div class="chart-container">
+              <canvas id="bar-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="card">
+          <div class="flex-between mb-20">
+            <h3>Recent Transactions</h3>
+            <a href="transactions.html" class="btn btn-secondary btn-sm">View All</a>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th>Amount</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recent-transactions"></tbody>
+            </table>
+          </div>
+          <div class="empty-state hidden" id="empty-transactions">
+            <div class="empty-icon">📝</div>
+            <p>No transactions yet. Add your first expense above!</p>
+          </div>
+        </div>
+
+        <!-- Budget Alerts -->
+        <div class="card" id="budget-alerts-card" style="display:none;">
+          <h3>⚠️ Budget Alerts</h3>
+          <div id="budget-alerts"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Notification Panel -->
+  <div class="modal-overlay" id="notification-modal">
+    <div class="modal">
+      <h3>🔔 Notifications</h3>
+      <div id="notification-list"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="document.getElementById('notification-modal').classList.remove('active')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/animations.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.Auth.requireAuth()) return;
+
+      App.UI.initSidebar();
+      App.UI.initThemeToggle();
+      App.UI.initUserInfo();
+      App.UI.initLogout();
+      App.UI.initSearchBar();
+
+      // Set default date to today
+      document.getElementById('qa-date').valueAsDate = new Date();
+
+      // Populate category select
+      App.UI.populateCategorySelect(document.getElementById('qa-category'), false);
+
+      // Render dashboard
+      refreshDashboard();
+
+      // Quick add form
+      document.getElementById('quick-add-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('qa-error');
+        errEl.textContent = '';
+
+        const result = App.Expenses.add({
+          amount: document.getElementById('qa-amount').value,
+          category: document.getElementById('qa-category').value,
+          date: document.getElementById('qa-date').value,
+          description: document.getElementById('qa-desc').value,
+          paymentMethod: 'Cash',
+        });
+
+        if (result.ok) {
+          App.UI.showToast('Expense added!', 'success');
+          document.getElementById('quick-add-form').reset();
+          document.getElementById('qa-date').valueAsDate = new Date();
+          refreshDashboard();
+        } else {
+          errEl.textContent = result.msg;
+        }
+      });
+
+      // Notification button
+      document.getElementById('notification-btn').addEventListener('click', () => {
+        showNotifications();
+        document.getElementById('notification-modal').classList.add('active');
+      });
+
+      // Sidebar toggle for mobile
+      document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+      });
+
+      // Global search
+      window.onGlobalSearch = (q) => {
+        if (q.length >= 2) {
+          window.location.href = 'transactions.html?search=' + encodeURIComponent(q);
+        }
+      };
+
+      Animations.initAll();
+    });
+
+    function refreshDashboard() {
+      App.UI.renderDashboardCards();
+      Charts.renderPieChart('pie-chart');
+      Charts.renderBarChart('bar-chart');
+      renderRecentTransactions();
+      renderBudgetAlerts();
+    }
+
+    function renderRecentTransactions() {
+      const expenses = App.Expenses.getFiltered({ sortBy: 'date', sortDir: 'desc' }).slice(0, 8);
+      const tbody = document.getElementById('recent-transactions');
+      const empty = document.getElementById('empty-transactions');
+      const sym = App.Settings.getCurrencySymbol();
+
+      if (expenses.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      tbody.innerHTML = expenses.map(e => `
+        <tr>
+          <td>${new Date(e.date).toLocaleDateString()}</td>
+          <td>${e.description || '-'}</td>
+          <td><span class="category-badge">${getCatIcon(e.category)} ${e.category}</span></td>
+          <td class="amount-cell">${sym}${e.amount.toFixed(2)}</td>
+          <td>
+            <button class="btn-icon delete-expense-btn" data-id="${e.id}" title="Delete">🗑️</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.delete-expense-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteExpense(btn.dataset.id));
+      });
+    }
+
+    function deleteExpense(id) {
+      if (confirm('Delete this expense?')) {
+        App.Expenses.remove(id);
+        App.UI.showToast('Expense deleted.', 'info');
+        refreshDashboard();
+      }
+    }
+
+    function getCatIcon(name) {
+      const cat = App.Categories.getAll().find(c => c.name === name);
+      return cat ? cat.icon : '📁';
+    }
+
+    function renderBudgetAlerts() {
+      const statuses = App.Budgets.getStatus();
+      const alerts = statuses.filter(s => s.status === 'warning' || s.status === 'exceeded');
+      const card = document.getElementById('budget-alerts-card');
+      const container = document.getElementById('budget-alerts');
+      const dot = document.getElementById('notif-dot');
+
+      if (alerts.length === 0) {
+        card.style.display = 'none';
+        dot.style.display = 'none';
+        return;
+      }
+
+      card.style.display = 'block';
+      dot.style.display = 'block';
+      const sym = App.Settings.getCurrencySymbol();
+
+      container.innerHTML = alerts.map(a => {
+        const cls = a.status === 'exceeded' ? 'budget-exceeded' : 'budget-warning';
+        const label = a.category === 'overall' ? 'Overall Budget' : a.category;
+        const msg = a.status === 'exceeded'
+          ? `⛔ ${label} budget exceeded! ${sym}${a.spent.toFixed(2)} / ${sym}${a.amount.toFixed(2)}`
+          : `⚠️ Warning: ${a.percentage.toFixed(0)}% of ${label} budget used. ${sym}${a.spent.toFixed(2)} / ${sym}${a.amount.toFixed(2)}`;
+        return `<p class="${cls}" style="margin-bottom:8px;">${msg}</p>`;
+      }).join('');
+    }
+
+    function showNotifications() {
+      const statuses = App.Budgets.getStatus();
+      const container = document.getElementById('notification-list');
+      const alerts = statuses.filter(s => s.status !== 'ok');
+
+      if (alerts.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted);padding:20px 0;">No notifications. Everything looks good! ✅</p>';
+        return;
+      }
+
+      const sym = App.Settings.getCurrencySymbol();
+      container.innerHTML = alerts.map(a => {
+        const label = a.category === 'overall' ? 'Overall' : a.category;
+        return `<div style="padding:12px 0;border-bottom:1px solid var(--border-color);">
+          <strong>${a.status === 'exceeded' ? '⛔' : '⚠️'} ${label}</strong>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">
+            ${a.percentage.toFixed(0)}% used — ${sym}${a.spent.toFixed(2)} of ${sym}${a.amount.toFixed(2)}
+          </p>
+        </div>`;
+      }).join('');
+    }
+  </script>
+</body>
+</html>

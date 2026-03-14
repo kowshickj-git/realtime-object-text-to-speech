@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Expense — ExpenseTracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <canvas id="ambient-bg"></canvas>
+  <div id="page-transition"></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><span class="logo-icon">💰</span><span>ExpenseTracker</span></div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+        <a href="add-expense.html"><span class="nav-icon">➕</span><span>Add Expense</span></a>
+        <a href="transactions.html"><span class="nav-icon">📋</span><span>Transactions</span></a>
+        <a href="analytics.html"><span class="nav-icon">📈</span><span>Analytics</span></a>
+        <a href="budgets.html"><span class="nav-icon">🎯</span><span>Budgets</span></a>
+        <a href="reports.html"><span class="nav-icon">📄</span><span>Reports</span></a>
+        <a href="settings.html"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-bottom"><a href="#" id="logout-btn"><span class="nav-icon">🚪</span><span>Log Out</span></a></div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebar-toggle">☰</button>
+          <h2>Add Expense</h2>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-icon" id="theme-toggle" title="Toggle theme">🌓</button>
+          <div class="user-info">
+            <span class="user-name" id="user-name"></span>
+            <div class="user-avatar" id="user-avatar"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div class="card" style="max-width:700px;">
+          <h3>New Expense</h3>
+          <form id="expense-form" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="amount">Amount *</label>
+                <input type="number" id="amount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
+                <div class="form-error" id="amount-error"></div>
+              </div>
+              <div class="form-group">
+                <label for="category">Category *</label>
+                <select id="category" class="form-control" required></select>
+                <div class="form-error" id="category-error"></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="date">Date *</label>
+                <input type="date" id="date" class="form-control" required>
+                <div class="form-error" id="date-error"></div>
+              </div>
+              <div class="form-group">
+                <label for="payment">Payment Method</label>
+                <select id="payment" class="form-control">
+                  <option value="Cash">Cash</option>
+                  <option value="Credit Card">Credit Card</option>
+                  <option value="Debit Card">Debit Card</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea id="description" class="form-control" rows="3" placeholder="What was this expense for?"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="recurring">Recurring</label>
+              <select id="recurring" class="form-control">
+                <option value="none">No — One-time expense</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+            <div class="form-error mb-10" id="form-error"></div>
+            <div class="flex gap-10">
+              <button type="submit" class="btn btn-primary">💾 Save Expense</button>
+              <button type="reset" class="btn btn-secondary">Clear</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Add Income Section -->
+        <div class="card" style="max-width:700px;">
+          <h3>Add Income</h3>
+          <form id="income-form" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inc-amount">Amount *</label>
+                <input type="number" id="inc-amount" class="form-control" placeholder="0.00" min="0.01" step="0.01" required>
+                <div class="form-error" id="inc-amount-error"></div>
+              </div>
+              <div class="form-group">
+                <label for="inc-date">Date</label>
+                <input type="date" id="inc-date" class="form-control">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="inc-desc">Description</label>
+              <input type="text" id="inc-desc" class="form-control" placeholder="Salary, freelance work, etc.">
+            </div>
+            <button type="submit" class="btn btn-primary">💰 Add Income</button>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/animations.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.Auth.requireAuth()) return;
+
+      App.UI.initSidebar();
+      App.UI.initThemeToggle();
+      App.UI.initUserInfo();
+      App.UI.initLogout();
+
+      document.getElementById('date').valueAsDate = new Date();
+      document.getElementById('inc-date').valueAsDate = new Date();
+      App.UI.populateCategorySelect(document.getElementById('category'), false);
+
+      // Expense form
+      document.getElementById('expense-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        clearErrors();
+
+        const amount = document.getElementById('amount').value;
+        const category = document.getElementById('category').value;
+        const date = document.getElementById('date').value;
+        const description = document.getElementById('description').value;
+        const paymentMethod = document.getElementById('payment').value;
+        const recurring = document.getElementById('recurring').value;
+
+        let valid = true;
+        if (!amount || isNaN(amount) || Number(amount) <= 0) {
+          document.getElementById('amount-error').textContent = 'Enter a valid amount.';
+          valid = false;
+        }
+        if (!category) {
+          document.getElementById('category-error').textContent = 'Select a category.';
+          valid = false;
+        }
+        if (!date) {
+          document.getElementById('date-error').textContent = 'Select a date.';
+          valid = false;
+        }
+        if (!valid) return;
+
+        const result = App.Expenses.add({ amount, category, date, description, paymentMethod, recurring });
+        if (result.ok) {
+          App.UI.showToast('Expense saved!', 'success');
+          document.getElementById('expense-form').reset();
+          document.getElementById('date').valueAsDate = new Date();
+        } else {
+          document.getElementById('form-error').textContent = result.msg;
+        }
+      });
+
+      // Income form
+      document.getElementById('income-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const amount = document.getElementById('inc-amount').value;
+        const date = document.getElementById('inc-date').value;
+        const desc = document.getElementById('inc-desc').value;
+
+        document.getElementById('inc-amount-error').textContent = '';
+
+        if (!amount || isNaN(amount) || Number(amount) <= 0) {
+          document.getElementById('inc-amount-error').textContent = 'Enter a valid amount.';
+          return;
+        }
+
+        const result = App.Income.add(amount, desc, date);
+        if (result.ok) {
+          App.UI.showToast('Income added!', 'success');
+          document.getElementById('income-form').reset();
+          document.getElementById('inc-date').valueAsDate = new Date();
+        } else {
+          document.getElementById('inc-amount-error').textContent = result.msg;
+        }
+      });
+
+      // Sidebar toggle
+      document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+      });
+
+      Animations.initAll();
+    });
+
+    function clearErrors() {
+      ['amount-error', 'category-error', 'date-error', 'form-error'].forEach(id => {
+        document.getElementById(id).textContent = '';
+      });
+    }
+  </script>
+</body>
+</html>
