@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions — ExpenseTracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <canvas id="ambient-bg"></canvas>
+  <div id="page-transition"></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><span class="logo-icon">💰</span><span>ExpenseTracker</span></div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+        <a href="add-expense.html"><span class="nav-icon">➕</span><span>Add Expense</span></a>
+        <a href="transactions.html"><span class="nav-icon">📋</span><span>Transactions</span></a>
+        <a href="analytics.html"><span class="nav-icon">📈</span><span>Analytics</span></a>
+        <a href="budgets.html"><span class="nav-icon">🎯</span><span>Budgets</span></a>
+        <a href="reports.html"><span class="nav-icon">📄</span><span>Reports</span></a>
+        <a href="settings.html"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-bottom"><a href="#" id="logout-btn"><span class="nav-icon">🚪</span><span>Log Out</span></a></div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebar-toggle">☰</button>
+          <h2>Transactions</h2>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-icon" id="theme-toggle" title="Toggle theme">🌓</button>
+          <div class="user-info">
+            <span class="user-name" id="user-name"></span>
+            <div class="user-avatar" id="user-avatar"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- Filters -->
+        <div class="card">
+          <div class="filters-bar">
+            <input type="text" id="search-input" class="form-control" placeholder="🔍 Search transactions..." style="flex:2;min-width:200px;">
+            <select id="filter-category" class="form-control"></select>
+            <input type="date" id="filter-start" class="form-control" title="Start date">
+            <input type="date" id="filter-end" class="form-control" title="End date">
+            <select id="sort-by" class="form-control">
+              <option value="date">Sort by Date</option>
+              <option value="amount">Sort by Amount</option>
+            </select>
+            <select id="sort-dir" class="form-control">
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+            <button class="btn btn-primary btn-sm" id="apply-filters">Apply</button>
+            <button class="btn btn-secondary btn-sm" id="clear-filters">Clear</button>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="card">
+          <div class="flex-between mb-20">
+            <h3>All Transactions (<span id="tx-count">0</span>)</h3>
+            <a href="add-expense.html" class="btn btn-primary btn-sm">➕ Add New</a>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th onclick="sortTable('date')">Date ↕</th>
+                  <th onclick="sortTable('amount')">Amount ↕</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Payment</th>
+                  <th>Recurring</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="transactions-body"></tbody>
+            </table>
+          </div>
+          <div class="empty-state hidden" id="empty-state">
+            <div class="empty-icon">📋</div>
+            <p>No transactions found. Start by adding your first expense!</p>
+            <a href="add-expense.html" class="btn btn-primary">➕ Add Expense</a>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <h3>Edit Expense</h3>
+      <form id="edit-form" novalidate>
+        <input type="hidden" id="edit-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-amount">Amount</label>
+            <input type="number" id="edit-amount" class="form-control" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-category">Category</label>
+            <select id="edit-category" class="form-control"></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-date">Date</label>
+            <input type="date" id="edit-date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-payment">Payment Method</label>
+            <select id="edit-payment" class="form-control">
+              <option value="Cash">Cash</option>
+              <option value="Credit Card">Credit Card</option>
+              <option value="Debit Card">Debit Card</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="UPI">UPI</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-desc">Description</label>
+          <input type="text" id="edit-desc" class="form-control">
+        </div>
+        <div class="form-group">
+          <label for="edit-recurring">Recurring</label>
+          <select id="edit-recurring" class="form-control">
+            <option value="none">None</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+        <div class="form-error" id="edit-error"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/animations.js"></script>
+  <script>
+    let currentSort = { by: 'date', dir: 'desc' };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.Auth.requireAuth()) return;
+
+      App.UI.initSidebar();
+      App.UI.initThemeToggle();
+      App.UI.initUserInfo();
+      App.UI.initLogout();
+
+      App.UI.populateCategorySelect(document.getElementById('filter-category'), true);
+      App.UI.populateCategorySelect(document.getElementById('edit-category'), false);
+
+      // Check for search param
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('search')) {
+        document.getElementById('search-input').value = params.get('search');
+      }
+
+      renderTransactions();
+
+      document.getElementById('apply-filters').addEventListener('click', renderTransactions);
+      document.getElementById('clear-filters').addEventListener('click', () => {
+        document.getElementById('search-input').value = '';
+        document.getElementById('filter-category').value = 'all';
+        document.getElementById('filter-start').value = '';
+        document.getElementById('filter-end').value = '';
+        document.getElementById('sort-by').value = 'date';
+        document.getElementById('sort-dir').value = 'desc';
+        currentSort = { by: 'date', dir: 'desc' };
+        renderTransactions();
+      });
+
+      // Search on enter
+      document.getElementById('search-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') renderTransactions();
+      });
+
+      // Edit form
+      document.getElementById('edit-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-id').value;
+        const result = App.Expenses.update(id, {
+          amount: document.getElementById('edit-amount').value,
+          category: document.getElementById('edit-category').value,
+          date: document.getElementById('edit-date').value,
+          description: document.getElementById('edit-desc').value,
+          paymentMethod: document.getElementById('edit-payment').value,
+          recurring: document.getElementById('edit-recurring').value,
+        });
+
+        if (result.ok) {
+          App.UI.showToast('Expense updated!', 'success');
+          closeEditModal();
+          renderTransactions();
+        } else {
+          document.getElementById('edit-error').textContent = result.msg;
+        }
+      });
+
+      document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+      });
+
+      Animations.initAll();
+    });
+
+    function renderTransactions() {
+      const filters = {
+        search: document.getElementById('search-input').value,
+        category: document.getElementById('filter-category').value,
+        startDate: document.getElementById('filter-start').value,
+        endDate: document.getElementById('filter-end').value,
+        sortBy: document.getElementById('sort-by').value || currentSort.by,
+        sortDir: document.getElementById('sort-dir').value || currentSort.dir,
+      };
+
+      const expenses = App.Expenses.getFiltered(filters);
+      const tbody = document.getElementById('transactions-body');
+      const empty = document.getElementById('empty-state');
+      const countEl = document.getElementById('tx-count');
+      const sym = App.Settings.getCurrencySymbol();
+
+      countEl.textContent = expenses.length;
+
+      if (expenses.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      const cats = App.Categories.getAll();
+
+      tbody.innerHTML = expenses.map(e => {
+        const cat = cats.find(c => c.name === e.category);
+        const icon = cat ? cat.icon : '📁';
+        return `<tr>
+          <td>${new Date(e.date).toLocaleDateString()}</td>
+          <td class="amount-cell">${sym}${e.amount.toFixed(2)}</td>
+          <td><span class="category-badge">${icon} ${e.category}</span></td>
+          <td>${e.description || '-'}</td>
+          <td>${e.paymentMethod}</td>
+          <td>${e.recurring === 'none' ? '-' : e.recurring}</td>
+          <td>
+            <button class="btn-icon" onclick="openEditModal('${e.id}')" title="Edit">✏️</button>
+            <button class="btn-icon" onclick="deleteExpense('${e.id}')" title="Delete">🗑️</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function sortTable(field) {
+      const sortByEl = document.getElementById('sort-by');
+      const sortDirEl = document.getElementById('sort-dir');
+      sortByEl.value = field;
+      if (currentSort.by === field) {
+        currentSort.dir = currentSort.dir === 'desc' ? 'asc' : 'desc';
+      } else {
+        currentSort.by = field;
+        currentSort.dir = 'desc';
+      }
+      sortDirEl.value = currentSort.dir;
+      renderTransactions();
+    }
+
+    function openEditModal(id) {
+      const expenses = App.Expenses.getUserExpenses();
+      const exp = expenses.find(e => e.id === id);
+      if (!exp) return;
+
+      document.getElementById('edit-id').value = exp.id;
+      document.getElementById('edit-amount').value = exp.amount;
+      document.getElementById('edit-category').value = exp.category;
+      document.getElementById('edit-date').value = exp.date;
+      document.getElementById('edit-desc').value = exp.description || '';
+      document.getElementById('edit-payment').value = exp.paymentMethod;
+      document.getElementById('edit-recurring').value = exp.recurring || 'none';
+      document.getElementById('edit-error').textContent = '';
+      document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('active');
+    }
+
+    function deleteExpense(id) {
+      if (confirm('Delete this expense?')) {
+        App.Expenses.remove(id);
+        App.UI.showToast('Expense deleted.', 'info');
+        renderTransactions();
+      }
+    }
+  </script>
+</body>
+</html>

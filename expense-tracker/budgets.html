@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budgets — ExpenseTracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <canvas id="ambient-bg"></canvas>
+  <div id="page-transition"></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"><span class="logo-icon">💰</span><span>ExpenseTracker</span></div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html"><span class="nav-icon">📊</span><span>Dashboard</span></a>
+        <a href="add-expense.html"><span class="nav-icon">➕</span><span>Add Expense</span></a>
+        <a href="transactions.html"><span class="nav-icon">📋</span><span>Transactions</span></a>
+        <a href="analytics.html"><span class="nav-icon">📈</span><span>Analytics</span></a>
+        <a href="budgets.html"><span class="nav-icon">🎯</span><span>Budgets</span></a>
+        <a href="reports.html"><span class="nav-icon">📄</span><span>Reports</span></a>
+        <a href="settings.html"><span class="nav-icon">⚙️</span><span>Settings</span></a>
+      </nav>
+      <div class="sidebar-bottom"><a href="#" id="logout-btn"><span class="nav-icon">🚪</span><span>Log Out</span></a></div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebar-toggle">☰</button>
+          <h2>Budget Management</h2>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-icon" id="theme-toggle" title="Toggle theme">🌓</button>
+          <div class="user-info">
+            <span class="user-name" id="user-name"></span>
+            <div class="user-avatar" id="user-avatar"></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- Set Budget -->
+        <div class="card" style="max-width:700px;">
+          <h3>Set Budget</h3>
+          <form id="budget-form" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="budget-category">Category</label>
+                <select id="budget-category" class="form-control">
+                  <option value="overall">📊 Overall Monthly Budget</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="budget-amount">Budget Amount</label>
+                <input type="number" id="budget-amount" class="form-control" placeholder="0.00" min="1" step="0.01" required>
+                <div class="form-error" id="budget-error"></div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">🎯 Set Budget</button>
+          </form>
+        </div>
+
+        <!-- Budget Overview -->
+        <div class="card">
+          <h3>Budget Overview — This Month</h3>
+          <div class="budget-list" id="budget-list"></div>
+          <div class="empty-state hidden" id="empty-budgets">
+            <div class="empty-icon">🎯</div>
+            <p>No budgets set yet. Create your first budget above!</p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/animations.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.Auth.requireAuth()) return;
+
+      App.UI.initSidebar();
+      App.UI.initThemeToggle();
+      App.UI.initUserInfo();
+      App.UI.initLogout();
+
+      // Populate budget category select
+      const catSelect = document.getElementById('budget-category');
+      App.Categories.getAll().forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.name;
+        opt.textContent = cat.icon + ' ' + cat.name;
+        catSelect.appendChild(opt);
+      });
+
+      renderBudgets();
+
+      // Budget form
+      document.getElementById('budget-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('budget-error');
+        errEl.textContent = '';
+
+        const category = document.getElementById('budget-category').value;
+        const amount = document.getElementById('budget-amount').value;
+
+        const result = App.Budgets.set(category, amount);
+        if (result.ok) {
+          App.UI.showToast('Budget set!', 'success');
+          document.getElementById('budget-amount').value = '';
+          renderBudgets();
+        } else {
+          errEl.textContent = result.msg;
+        }
+      });
+
+      document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('open');
+      });
+
+      Animations.initAll();
+    });
+
+    function renderBudgets() {
+      const statuses = App.Budgets.getStatus();
+      const container = document.getElementById('budget-list');
+      const empty = document.getElementById('empty-budgets');
+      const sym = App.Settings.getCurrencySymbol();
+
+      if (statuses.length === 0) {
+        container.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      const cats = App.Categories.getAll();
+
+      container.innerHTML = statuses.map(b => {
+        const cat = cats.find(c => c.name === b.category);
+        const icon = b.category === 'overall' ? '📊' : (cat ? cat.icon : '📁');
+        const label = b.category === 'overall' ? 'Overall Monthly Budget' : b.category;
+
+        let barClass = '';
+        let alertHtml = '';
+        if (b.status === 'exceeded') {
+          barClass = 'exceeded';
+          alertHtml = `<div class="budget-exceeded">⛔ Budget exceeded!</div>`;
+        } else if (b.status === 'warning') {
+          barClass = 'warning';
+          alertHtml = `<div class="budget-warning">⚠️ Warning: ${b.percentage.toFixed(0)}% of budget used.</div>`;
+        }
+
+        return `
+          <div class="budget-item">
+            <div class="budget-header">
+              <div class="budget-name">${icon} ${label}</div>
+              <div class="budget-amount">${sym}${b.spent.toFixed(2)} / ${sym}${b.amount.toFixed(2)}</div>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill ${barClass}" style="width:${Math.min(b.percentage, 100)}%;"></div>
+            </div>
+            <div class="budget-footer">
+              <span>${b.percentage.toFixed(1)}% used</span>
+              <span>${sym}${(b.amount - b.spent > 0 ? b.amount - b.spent : 0).toFixed(2)} remaining</span>
+            </div>
+            ${alertHtml}
+            <div style="margin-top:10px;text-align:right;">
+              <button class="btn btn-danger btn-sm" onclick="deleteBudget('${b.id}')">Remove</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function deleteBudget(id) {
+      if (confirm('Remove this budget?')) {
+        App.Budgets.remove(id);
+        App.UI.showToast('Budget removed.', 'info');
+        renderBudgets();
+      }
+    }
+  </script>
+</body>
+</html>
